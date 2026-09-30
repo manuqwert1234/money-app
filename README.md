@@ -24,7 +24,7 @@ Optional: tap **Sign in with Google** instead (or later) if you also want your b
 iPhones can't install apps outside the App Store, so Money runs as a home-screen app.
 
 1. Open **https://manuqwert1234.github.io/money-tracker/** in **Safari**.
-2. Tap **Sign in with Google** and allow the permission screens (same as Android, steps 4 and 5).
+2. Tap **Sign in with Google** and allow the permission screens. If Google says the app isn't verified, tap **Advanced**, then **Go to Money**. The first time only, it asks you to turn on one switch (the page shows the button).
 3. When you're back, tap **Share**, then **Add to Home Screen**.
 
 Bank **emails** now work automatically. To also read bank **texts** on iPhone (optional, for instant updates):
