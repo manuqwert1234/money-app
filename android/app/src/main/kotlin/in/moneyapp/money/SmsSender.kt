@@ -40,6 +40,27 @@ object SmsSender {
         }
     }
 
+    /** "On this phone" mode: bank texts from the inbox (last 3 years) as JSON items, oldest first. */
+    fun readInbox(ctx: Context): List<JSONObject> {
+        val since = System.currentTimeMillis() - 3L * 365 * 86400000
+        val items = mutableListOf<JSONObject>()
+        ctx.contentResolver.query(Uri.parse("content://sms/inbox"), arrayOf("address", "body", "date"), "date > ?", arrayOf(since.toString()), "date ASC")?.use { c ->
+            while (c.moveToNext()) {
+                val from = c.getString(0) ?: ""; val body = c.getString(1) ?: ""
+                if (looksLikeMoney(from, body)) items.add(JSONObject().put("text", "$from: $body").put("when", c.getLong(2)))
+            }
+        }
+        return items
+    }
+
+    /** "On this phone" mode: keep a new text until the app is open to read it. */
+    fun queue(ctx: Context, text: String, whenMs: Long) {
+        val p = ctx.getSharedPreferences("money", Context.MODE_PRIVATE)
+        val arr = try { JSONArray(p.getString("queue", "[]")) } catch (_: Exception) { JSONArray() }
+        arr.put(JSONObject().put("text", text).put("when", whenMs))
+        p.edit().putString("queue", arr.toString()).apply()
+    }
+
     /** First setup: send old bank texts already on the phone (last 3 years), in batches. */
     fun importInbox(ctx: Context, done: (Int) -> Unit) {
         val prefs = ctx.getSharedPreferences("money", Context.MODE_PRIVATE)

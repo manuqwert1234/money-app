@@ -11,14 +11,13 @@ See your bank balance and spending automatically, from your bank's texts and ema
 
 ## Android (recommended)
 
-1. Download **[Money.apk](https://github.com/manuqwert1234/money-app/releases/latest/download/Money.apk)** on your Android phone.
-2. Open it. If Android asks, allow installing from your browser ("Install unknown apps").
-3. Open **Money** and tap **Sign in with Google**.
-4. Allow the two Google permission screens. If Google says the app isn't verified, tap **Advanced**, then **Go to Money**. It is your own private copy, so the warning is expected.
-5. The first time only, Google asks you to turn on one switch (**Google Apps Script API**). The app shows the button.
-6. You're back in Money automatically. Tap **Allow** when it asks to read texts.
+1. Download **[Money.apk](https://github.com/manuqwert1234/money-app/releases/latest/download/Money.apk)** on your Android phone and open it. If Android asks, allow installing from your browser.
+2. Open **Money** and tap **Start**.
+3. Tap **Allow** when it asks to read texts.
 
-That's it. New bank texts and emails show up by themselves. Only bank messages are sent to your account; texts from people's phone numbers are never read.
+That's it. No account and no sign-in. Money reads your bank texts from the last 3 years and every new one as it arrives. Everything stays **on your phone**. Texts from people's phone numbers are never read.
+
+Optional: tap **Sign in with Google** instead (or later) if you also want your bank **emails** included, or want to use Money on more than one phone. That stores your data in your own Google account.
 
 ## iPhone
 

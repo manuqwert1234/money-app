@@ -21,7 +21,8 @@ import android.webkit.WebViewClient
  * reading bank texts (only money messages are sent, to the person's own Google account).
  */
 class MainActivity : Activity() {
-    companion object { const val APP = "https://manuqwert1234.github.io/money-tracker/"; const val REQ_SMS = 7 }
+    companion object { const val APP = "https://manuqwert1234.github.io/money-tracker/"; const val REQ_SMS = 7; const val REQ_LOCAL = 8
+        @Volatile var current: MainActivity? = null }
     private lateinit var web: WebView
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -42,6 +43,7 @@ class MainActivity : Activity() {
             }
         }
         setContentView(web)
+        current = this
         web.loadUrl(startUrl(intent))
     }
 
@@ -53,11 +55,44 @@ class MainActivity : Activity() {
         return if (c != null) APP + "#c=" + c else APP
     }
 
+    override fun onDestroy() { if (current === this) current = null; super.onDestroy() }
+    override fun onResume() { super.onResume(); deliverQueue() }
+
+    private val prefs get() = getSharedPreferences("money", Context.MODE_PRIVATE)
+
+    /** Hand texts to the web app in chunks (it reads them with the same Money code as the server). */
+    private fun toWeb(items: List<org.json.JSONObject>) {
+        for (chunk in items.chunked(200)) {
+            val js = "window.onLocalTexts && onLocalTexts(" + org.json.JSONArray(chunk).toString() + ")"
+            runOnUiThread { web.evaluateJavascript(js, null) }
+        }
+    }
+    /** New texts that arrived while the app was closed. */
+    fun deliverQueue() {
+        if (!prefs.getBoolean("local", false)) return
+        val q = prefs.getString("queue", "[]") ?: "[]"
+        if (q == "[]") return
+        prefs.edit().putString("queue", "[]").apply()
+        val arr = org.json.JSONArray(q); toWeb((0 until arr.length()).map { arr.getJSONObject(it) })
+    }
+    /** First start in "on this phone" mode: read old bank texts once. */
+    private fun startLocalNow() {
+        prefs.edit().putBoolean("local", true).apply()
+        if (!prefs.getBoolean("localImported", false)) Thread {
+            val items = try { SmsSender.readInbox(this) } catch (_: Exception) { emptyList() }
+            prefs.edit().putBoolean("localImported", true).apply()
+            toWeb(items)
+            if (items.isEmpty()) runOnUiThread { web.evaluateJavascript("window.toast && toast('No bank texts found yet. New ones will appear here.')", null) }
+        }.start()
+        deliverQueue()
+    }
+
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() { if (web.canGoBack()) web.goBack() else super.onBackPressed() }
 
     override fun onRequestPermissionsResult(code: Int, perms: Array<out String>, res: IntArray) {
         super.onRequestPermissionsResult(code, perms, res)
+        if (code == REQ_LOCAL) { if (hasPerm(Manifest.permission.READ_SMS)) startLocalNow() else web.evaluateJavascript("window.toast && toast('Allow texts so Money can read your bank messages')", null); return }
         if (code == REQ_SMS && hasPerm(Manifest.permission.READ_SMS)) SmsSender.importInbox(this) { added ->
             runOnUiThread { web.evaluateJavascript("window.onSmsImport && onSmsImport($added)", null) }
         }
@@ -76,6 +111,11 @@ class MainActivity : Activity() {
                 requestPermissions(arrayOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS), REQ_SMS)
             } else if (changed && hasPerm(Manifest.permission.READ_SMS)) SmsSender.importInbox(this@MainActivity) { }
         }
+        @JavascriptInterface fun localAvailable(): Boolean = true
+        @JavascriptInterface fun startLocal() { runOnUiThread {
+            if (hasPerm(Manifest.permission.READ_SMS) && hasPerm(Manifest.permission.RECEIVE_SMS)) startLocalNow()
+            else requestPermissions(arrayOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS), REQ_LOCAL)
+        } }
         @JavascriptInterface fun smsAllowed(): Boolean = hasPerm(Manifest.permission.RECEIVE_SMS)
         @JavascriptInterface fun requestSms() { runOnUiThread { requestPermissions(arrayOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS), REQ_SMS) } }
         @JavascriptInterface fun openSettings() { runOnUiThread { startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))) } }

@@ -17,7 +17,10 @@ class SmsReceiver : BroadcastReceiver() {
             try {
                 for ((from, ps) in bySender) {
                     val body = ps.joinToString("") { it.messageBody ?: "" }
-                    if (SmsSender.looksLikeMoney(from, body)) SmsSender.send(ctx, "$from: $body", ps.first().timestampMillis)
+                    if (!SmsSender.looksLikeMoney(from, body)) continue
+                    val local = ctx.getSharedPreferences("money", Context.MODE_PRIVATE).getBoolean("local", false)
+                    if (local) { SmsSender.queue(ctx, "$from: $body", ps.first().timestampMillis); MainActivity.current?.deliverQueue() }
+                    else SmsSender.send(ctx, "$from: $body", ps.first().timestampMillis)
                 }
             } finally { pending.finish() }
         }.start()
